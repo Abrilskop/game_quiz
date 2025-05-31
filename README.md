@@ -24,7 +24,7 @@ Un divertido juego de preguntas y respuestas desarrollado con Flutter. ¡Pon a p
 **Ejemplo:**
 | Pantalla de Quiz                                     | Pantalla de Resultados                                  |
 | :--------------------------------------------------: | :---------------------------------------------------: |
-| `![Quiz Page Screenshot](assets/images/quiz_screen.png)` | `![Results Page Screenshot](assets/images/results_screen.png)` |
+| ![Quiz Page Screenshot](assets/images/quiz_screen.png) | ![Results Page Screenshot](assets/images/results_screen.png) |
 
 ## 🏗️ Estructura del Proyecto
 
