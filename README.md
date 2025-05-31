@@ -19,12 +19,12 @@ Un divertido juego de preguntas y respuestas desarrollado con Flutter. ¡Pon a p
 
 ## 📸 Screenshots
 
-*(¡Añade aquí algunas capturas de pantalla de tu aplicación! Por ejemplo: pantalla de inicio del quiz, una pregunta, pantalla de resultados.)*
+*(Aquí algunas capturas de pantalla de la aplicación! como pantalla de inicio del quiz, una pregunta, pantalla de resultados.)*
 
 **Ejemplo:**
 | Pantalla de Quiz                                     | Pantalla de Resultados                                  |
 | :--------------------------------------------------: | :---------------------------------------------------: |
-| `![Quiz Page Screenshot](ruta/a/tu/screenshot_1.png)` | `![Results Page Screenshot](ruta/a/tu/screenshot_2.png)` |
+| `![Quiz Page Screenshot](assets/images/quiz_screen.png)` | `![Results Page Screenshot](assets/images/results_screen.png)` |
 
 ## 🏗️ Estructura del Proyecto
 

@@ -17,7 +17,7 @@ class QuizPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flutter Quiz'),
+        title: const Text('UWU Quiz'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20.0),
