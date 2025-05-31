@@ -1,150 +1,118 @@
-// test/widget/quiz_page_test.dart
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-// Ajusta las rutas según tu estructura de proyecto
-import 'package:game_quiz/providers/quiz_provider.dart';
-import 'package:game_quiz/screens/quiz_page.dart';
-import 'package:game_quiz/models/question_model.dart';
-import 'package:game_quiz/widgets/option_button.dart';
-import 'package:game_quiz/widgets/question_display.dart';
-import 'package:game_quiz/screens/results_page.dart';
-import 'package:game_quiz/constants/app_theme.dart'; // Importa tu tema
+// lib/providers/quiz_provider.dart
+import 'package:flutter/foundation.dart';
+import 'package:game_quiz/models/question_model.dart'; // Asegúrate que la ruta es correcta
 
-// Mock de preguntas para un control más fino en las pruebas de widget
-// ESTA VARIABLE AHORA SE USARÁ
-final mockQuestionsList = [
-  Question(questionText: 'Test Q1: Capital of Testland?', options: ['Test A', 'Test B', 'Test C'], correctAnswer: 'Test A'),
-  Question(questionText: 'Test Q2: Color of Test Sky?', options: ['Test Blue', 'Test Green', 'Test Red'], correctAnswer: 'Test Blue'),
-  Question(questionText: 'Test Q3: Final Question?', options: ['Yes', 'No'], correctAnswer: 'Yes'),
-];
+class QuizProvider with ChangeNotifier {
+  // _questions ahora es final y se inicializa en el constructor.
+  final List<Question> _questions;
 
-// Helper para envolver el widget bajo prueba con MaterialApp y Provider
-Widget createQuizPageTestWidget({QuizProvider? provider}) {
-  return ChangeNotifierProvider<QuizProvider>(
-    // Si no se provee un provider, crea uno con las preguntas mock
-    create: (_) => provider ?? QuizProvider(questions: mockQuestionsList),
-    child: MaterialApp(
-      theme: AppTheme.lightTheme, // Aplica el tema para que los widgets lo encuentren
-      home: const QuizPage(),
-      // Define rutas para poder navegar y verificar la navegación en las pruebas
-      routes: {
-        // Asegúrate que ResultsPage también se envuelva en un Provider si lo necesita directamente,
-        // aunque usualmente leerá del provider existente en el árbol.
-        '/results': (context) => const ResultsPage(),
-      },
+  // Preguntas por defecto que se usarán si no se proporcionan preguntas al constructor.
+  // Estas son las preguntas que tenías hardcodeadas antes.
+  static final List<Question> _defaultQuestions = [
+    Question(
+      questionText: '¿Cuál es la capital de Francia?',
+      options: ['Berlín', 'Madrid', 'París', 'Roma'],
+      correctAnswer: 'París',
     ),
-  );
-}
+    Question(
+      questionText: '¿Qué planeta es conocido como el Planeta Rojo?',
+      options: ['Tierra', 'Marte', 'Júpiter', 'Saturno'],
+      correctAnswer: 'Marte',
+    ),
+    // ... puedes añadir más preguntas por defecto aquí
+  ];
 
-void main() {
-  late QuizProvider testQuizProvider;
+  int _currentQuestionIndex = 0;
+  int _score = 0;
+  String? _selectedAnswer;
+  bool _isAnswered = false;
 
-  setUp(() {
-    // Ahora pasamos las preguntas mock al constructor de QuizProvider
-    testQuizProvider = QuizProvider(questions: mockQuestionsList);
-    // testQuizProvider.resetQuiz(); // El constructor ya establece el estado inicial.
-                                  // resetQuiz() aquí es redundante a menos que hagas algo entre
-                                  // la creación y el uso que necesite resetearse.
-                                  // Es buena práctica llamar a reset si los tests pueden dejar
-                                  // el provider en un estado no deseado para el siguiente test.
-                                  // Dado que creamos una nueva instancia en cada setUp, está bien.
-  });
-
-
-  testWidgets('QuizPage displays initial question and options from mock list', (WidgetTester tester) async {
-    // Usamos el testQuizProvider configurado en setUp
-    await tester.pumpWidget(createQuizPageTestWidget(provider: testQuizProvider));
-
-    // Verifica que se muestra el QuestionDisplay y el texto de la primera pregunta mock
-    expect(find.byType(QuestionDisplay), findsOneWidget);
-    expect(find.text(mockQuestionsList[0].questionText), findsOneWidget); // Usa mockQuestionsList para verificar
-
-    // Verifica que se muestran los botones de opción para la primera pregunta mock
-    for (var option in mockQuestionsList[0].options) {
-      expect(find.widgetWithText(OptionButton, option), findsOneWidget);
+  // CONSTRUCTOR MODIFICADO
+  // Acepta una lista opcional de preguntas.
+  // Si no se proveen preguntas, usa _defaultQuestions.
+  QuizProvider({List<Question>? questions})
+      : _questions = questions ?? _defaultQuestions {
+    // Es buena idea verificar si la lista de preguntas está vacía,
+    // ya que podría causar problemas si la UI espera al menos una pregunta.
+    if (_questions.isEmpty) {
+      // Considera cómo manejar este caso: lanzar un error,
+      // o asegurar que la UI pueda mostrar un mensaje apropiado.
+      print("ADVERTENCIA: QuizProvider se inicializó con una lista de preguntas vacía.");
+      // Podrías lanzar una excepción si una lista vacía es un estado inválido:
+      // throw ArgumentError("La lista de preguntas no puede estar vacía.");
     }
+    // No es necesario llamar a resetQuiz() aquí si el constructor ya establece el estado inicial deseado.
+  }
 
-    // Verifica que el botón "Siguiente Pregunta" / "Ver Resultados" no está visible inicialmente
-    expect(find.text('Siguiente Pregunta'), findsNothing);
-    expect(find.text('Ver Resultados'), findsNothing);
-  });
+  // Getters
+  List<Question> get questions => _questions;
 
-  testWidgets('Tapping correct option updates score and shows "Siguiente Pregunta" button', (WidgetTester tester) async {
-    await tester.pumpWidget(createQuizPageTestWidget(provider: testQuizProvider));
-
-    final correctAnswer = mockQuestionsList[0].correctAnswer; // Usa la pregunta mock
-    await tester.tap(find.widgetWithText(OptionButton, correctAnswer));
-    await tester.pump(); // Reconstruye el widget después del cambio de estado
-
-    expect(testQuizProvider.score, 1);
-    expect(testQuizProvider.isAnswered, true);
-
-    // Verifica que el botón de "Siguiente Pregunta" aparece
-    // (o "Ver Resultados" si solo hay una pregunta en mockQuestionsList)
-    if (mockQuestionsList.length > 1) {
-        expect(find.text('Siguiente Pregunta'), findsOneWidget);
-    } else {
-        expect(find.text('Ver Resultados'), findsOneWidget);
+  Question get currentQuestion {
+    if (_questions.isEmpty) {
+      // Esto previene un error de rango si _questions está vacío y se intenta acceder a un índice.
+      // Deberías decidir cómo manejar esto en tu UI. Podrías devolver una pregunta "dummy"
+      // o lanzar un error más específico para que la UI lo capture.
+      throw StateError("No hay preguntas disponibles en el quiz.");
     }
-  });
+    return _questions[_currentQuestionIndex];
+  }
 
-  testWidgets('Tapping "Siguiente Pregunta" loads next question from mock list', (WidgetTester tester) async {
-    // Asegúrate de que haya al menos 2 preguntas para este test en mockQuestionsList
-    if (mockQuestionsList.length < 2) {
-        print("Skipping 'Tapping Siguiente' test: Not enough mock questions.");
-        return;
+  int get currentQuestionIndex => _currentQuestionIndex;
+  int get score => _score;
+  String? get selectedAnswer => _selectedAnswer;
+  bool get isAnswered => _isAnswered;
+
+  // bool get isQuizOver => _currentQuestionIndex >= _questions.length - 1 && _isAnswered;
+  // Es más seguro comprobar primero si _questions está vacío:
+  bool get isQuizOver {
+    if (_questions.isEmpty) return true; // Si no hay preguntas, el quiz "terminó"
+    return _currentQuestionIndex >= _questions.length - 1 && _isAnswered;
+  }
+
+  void answerQuestion(String selectedOption) {
+    if (_isAnswered || _questions.isEmpty) return;
+
+    _selectedAnswer = selectedOption;
+    _isAnswered = true;
+    if (selectedOption == currentQuestion.correctAnswer) {
+      _score++;
     }
+    notifyListeners();
+  }
 
-    await tester.pumpWidget(createQuizPageTestWidget(provider: testQuizProvider));
-
-    // Primera respuesta
-    await tester.tap(find.widgetWithText(OptionButton, mockQuestionsList[0].correctAnswer));
-    await tester.pump();
-
-    // Tap en Siguiente
-    await tester.tap(find.text('Siguiente Pregunta'));
-    await tester.pump();
-
-    // Verifica que se muestra la segunda pregunta mock
-    expect(find.text(mockQuestionsList[1].questionText), findsOneWidget);
-    expect(testQuizProvider.currentQuestionIndex, 1);
-    expect(testQuizProvider.isAnswered, false);
-  });
-
-  testWidgets('Finishing quiz navigates to ResultsPage', (WidgetTester tester) async {
-    // No es necesario pasar el provider aquí si `createQuizPageTestWidget` ya lo hace
-    // y el `testQuizProvider` de `setUp` se usa globalmente en este grupo de test.
-    // Sin embargo, para claridad, puedes pasarlo explícitamente si lo deseas.
-    await tester.pumpWidget(createQuizPageTestWidget(provider: testQuizProvider));
-
-    // Simula responder todas las preguntas mock
-    for (int i = 0; i < mockQuestionsList.length; i++) {
-      // Encuentra la primera opción como ejemplo, podrías elegir la correcta si quieres
-      await tester.tap(find.widgetWithText(OptionButton, mockQuestionsList[i].options.first).first); // .first por si hay duplicados
-      await tester.pump();
-
-      if (i < mockQuestionsList.length - 1) {
-        expect(find.text('Siguiente Pregunta'), findsOneWidget);
-        await tester.tap(find.text('Siguiente Pregunta'));
-      } else {
-        expect(find.text('Ver Resultados'), findsOneWidget);
-        await tester.tap(find.text('Ver Resultados'));
+  void nextQuestion() {
+    if (_questions.isEmpty || isQuizOver && _currentQuestionIndex >= _questions.length -1) {
+      // Si no hay preguntas o ya estamos en la última pregunta y se contestó,
+      // no hay "siguiente" pregunta en el sentido de avanzar el índice.
+      // La lógica de navegar a resultados se maneja en la UI basada en isQuizOver.
+      if (!isQuizOver) { // Solo notificar si aún no ha terminado formalmente
+          notifyListeners();
       }
-      // pumpAndSettle() espera a que las animaciones (como la navegación) terminen
-      await tester.pumpAndSettle();
+      return;
     }
+    
+    if (_currentQuestionIndex < _questions.length - 1) {
+      _currentQuestionIndex++;
+      _selectedAnswer = null;
+      _isAnswered = false;
+      notifyListeners();
+    } else {
+      // Esto realmente no debería suceder si la UI usa `isQuizOver` correctamente
+      // para cambiar el botón a "Ver Resultados".
+      // Pero si se llama, nos aseguramos de que el estado se notifique.
+      print("Intentando llamar a nextQuestion() cuando el quiz ya debería haber terminado.");
+      notifyListeners();
+    }
+  }
 
-    // Verifica que estamos en la ResultsPage
-    expect(find.byType(ResultsPage), findsOneWidget);
-    expect(find.textContaining('Tu puntuación:'), findsOneWidget);
-    // Verifica el score final basado en cómo respondiste (aquí siempre la primera opción)
-    // Este cálculo del score esperado dependerá de tu lógica de respuesta en el bucle.
-    // Si siempre eliges la primera opción:
-    int expectedScore = 0;
-    for(var q in mockQuestionsList) {
-        if(q.options.first == q.correctAnswer) expectedScore++;
-    }
-    expect(find.text('Tu puntuación: $expectedScore de ${mockQuestionsList.length}'), findsOneWidget);
-  });
+  void resetQuiz() {
+    _currentQuestionIndex = 0;
+    _score = 0;
+    _selectedAnswer = null;
+    _isAnswered = false;
+    // _questions es 'final', así que no se reasigna aquí. La instancia del provider
+    // usará las preguntas con las que fue creada. Si necesitas *cambiar*
+    // el set de preguntas, tendrías que crear una nueva instancia de QuizProvider.
+    notifyListeners();
+  }
 }
